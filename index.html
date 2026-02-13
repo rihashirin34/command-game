@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Meme Game 🎤😂</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;800&family=Luckiest+Guy&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #2b32b2, #0f0c29);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        #gameCanvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .hud-text {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #listening-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 20px;
+            border-radius: 30px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mic-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4757;
+            box-shadow: 0 0 10px #ff4757;
+            animation: pulse 1.5s infinite;
+        }
+
+        #command-bubble {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 60px;
+            font-family: 'Luckiest Guy', cursive;
+            background: linear-gradient(to bottom, #fff, #eee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.2));
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            letter-spacing: 2px;
+        }
+
+        #command-bubble.pop {
+            opacity: 1;
+            transform: translateX(-50%) scale(1.2);
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            color: white;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 100px;
+            margin: 0;
+            background: linear-gradient(to right, #feca57, #ff9ff3);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+            animation: bounce 2s infinite;
+        }
+
+        p {
+            font-size: 20px;
+            max-width: 600px;
+            margin: 20px 0;
+            font-weight: 400;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        button {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 18px 50px;
+            background: linear-gradient(45deg, #ff9ff3, #feca57);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 159, 243, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(255, 159, 243, 0.6);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
+            }
+
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div id="score-display" class="hud-text">Score: 0</div>
+        <div id="listening-status">
+            <div class="mic-icon"></div>
+            <span id="mic-text">Mic Off</span>
+        </div>
+        <div id="command-bubble">JUMP!</div>
+    </div>
+
+    <div id="start-screen">
+        <h1>SAY IT! DO IT!</h1>
+        <p>Shout commands to control the blob:</p>
+        <p style="color: #54a0ff; font-weight: bold;">"JUMP", "DANCE", "SPIN", "EAT"</p>
+        <p style="font-size: 18px; color: #ccc;">(Allow microphone access when prompted)</p>
+        <button id="start-btn">START SHOUTING</button>
+    </div>
+
+    <script>
+        // --- SPEECH RECOGNITION SETUP ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+
+        let recognition = null;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            // Define Grammar to boost accuracy
+            if (SpeechGrammarList) {
+                const words = ['jump', 'hop', 'dance', 'spin', 'roll', 'eat', 'pizza'];
+                const grammar = '#JSGF V1.0; grammar commands; public <command> = ' + words.join(' | ') + ' ;';
+                const speechRecognitionList = new SpeechGrammarList();
+                speechRecognitionList.addFromString(grammar, 1);
+                recognition.grammars = speechRecognitionList;
+            }
+        } else {
+            alert("Web Speech API not supported in this browser. Try Chrome!");
+        }
+
+        // --- GAME CLASSES ---
+
+        class AudioController {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
+
+            playTone(freq, type, duration) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+        }
+
+        // --- PHYSICS & ANIMATION HELPERS ---
+
+        class Spring {
+            constructor(val = 0, k = 0.1, d = 0.8) {
+                this.target = val;
+                this.val = val;
+                this.vel = 0;
+                this.k = k; // Stiffness
+                this.d = d; // Damping
+            }
+            update() {
+                let f = (this.target - this.val) * this.k;
+                this.vel += f;
+                this.vel *= this.d;
+                this.val += this.vel;
+            }
+            snap(v) { this.val = v; this.vel = 0; }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = (Math.random() - 1) * 5;
+                this.life = 1.0;
+                this.color = color;
+                this.size = Math.random() * 5 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // Gravity
+                this.life -= 0.02;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class DroneCharacter {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.baseY = y;
+                this.radius = 40; // Core size
+
+                this.state = 'IDLE';
+                this.timer = 0;
+
+                // Physics Springs (Reusing for organic feel of the machine)
+                this.sy = new Spring(1, 0.05, 0.9);
+                this.sx = new Spring(1, 0.05, 0.9);
+                this.rot = new Spring(0, 0.05, 0.9);
+                this.posY = new Spring(y, 0.05, 0.9);
+
+                this.rotorAngle = 0;
+                this.scannerAngle = 0;
+
+                this.particles = [];
+            }
+
+            update() {
+                // Update Springs
+                this.sy.update();
+                this.sx.update();
+                this.rot.update();
+                this.posY.update();
+
+                // Rotors always spin
+                this.rotorAngle += 0.5;
+
+                // Scanner Animation
+                this.scannerAngle += 0.1;
+
+                // Particle Logic
+                this.particles.forEach(p => p.update());
+                this.particles = this.particles.filter(p => p.life > 0);
+
+                // Constant Thruster Particles
+                if (Math.random() > 0.5) {
+                    this.particles.push(new Particle(this.x + (Math.random() - 0.5) * 20, this.posY.val + 40, '#00d2d3'));
+                }
+
+                if (this.state === 'IDLE') {
+                    // Hover
+                    this.posY.target = this.baseY + Math.sin(Date.now() / 800) * 20;
+                    this.rot.target = Math.sin(Date.now() / 1000) * 0.05; // Gentle sway
+                    this.sy.target = 1;
+                    this.sx.target = 1;
+                }
+
+                else if (this.state === 'JUMP') {
+                    if (this.posY.val >= this.baseY - 5 && this.posY.vel > 0) {
+                        this.state = 'IDLE';
+                        this.sy.vel = -0.3; // Landing shock
+                        this.spawnDust();
+                        audio.playTone(100, 'sawtooth', 0.1);
+                    }
+                }
+
+                else if (this.state === 'SPIN') {
+                    this.posY.target = this.baseY - 150;
+                    this.rot.val += 0.4;
+                    this.timer--;
+                    if (this.timer <= 0) {
+                        this.state = 'IDLE';
+                        this.rot.target = 0;
+                    }
+                }
+
+                else if (this.state === 'DANCE') {
+                    this.timer--;
+                    this.posY.target = this.baseY;
+                    this.rot.target = Math.sin(this.timer * 0.2) * 0.3;
+                    this.x += Math.sin(this.timer * 0.3) * 2; // Side strafe
+
+                    if (this.timer % 10 === 0) this.spawnSparkles();
+                    if (this.timer <= 0) {
+                        this.state = 'IDLE';
+                        this.x = window.innerWidth / 2;
+                    }
+                }
+
+                else if (this.state === 'EAT') {
+                    this.timer--;
+                    // Drone "Scanning/Processing" animation?
+                    this.sx.target = 1.1;
+                    this.sy.target = 1.1;
+                    if (this.timer <= 0) this.state = 'IDLE';
+                }
+            }
+
+            spawnDust() {
+                for (let i = 0; i < 15; i++) this.particles.push(new Particle(this.x, this.baseY + 60, '#aaaaaa'));
+            }
+
+            spawnSparkles() {
+                this.particles.push(new Particle(this.x + (Math.random() - 0.5) * 100, this.y - 100 + (Math.random() - 0.5) * 100, '#00d2d3'));
+            }
+
+            draw(ctx) {
+                // Particles (Thruster trails)
+                this.particles.forEach(p => p.draw(ctx));
+
+                ctx.save();
+                ctx.translate(this.x, this.posY.val);
+
+                // Shadow
+                ctx.save();
+                ctx.scale(1, 0.3);
+                ctx.beginPath();
+                ctx.arc(0, 300, 40 * 0.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fill();
+                ctx.filter = 'blur(15px)';
+                ctx.restore();
+
+                ctx.rotate(this.rot.val);
+                ctx.scale(this.sx.val, this.sy.val);
+
+                // --- DRONE BODY ---
+
+                // 1. Rotors (Left & Right)
+                const drawRotor = (ox) => {
+                    ctx.save();
+                    ctx.translate(ox, -20);
+                    // Arm
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(ox > 0 ? -40 : 40, 20); // Connect to body
+                    ctx.stroke();
+
+                    // Blade Blur
+                    ctx.fillStyle = 'rgba(200, 255, 255, 0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 35, 5, this.rotorAngle * (ox > 0 ? 1 : -1), 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.restore();
+                };
+                drawRotor(-60);
+                drawRotor(60);
+
+                // 2. Main Spherical Hull (Metallic)
+                let hullGrad = ctx.createRadialGradient(-15, -15, 5, 0, 0, this.radius);
+                hullGrad.addColorStop(0, '#ffffff'); // Highlight
+                hullGrad.addColorStop(0.3, '#dvdvdv');
+                hullGrad.addColorStop(1, '#2f3542'); // Shadow
+
+                if (this.state === 'EAT') {
+                    // Turn green when eating/processing
+                    hullGrad = ctx.createRadialGradient(-15, -15, 5, 0, 0, this.radius);
+                    hullGrad.addColorStop(0, '#7bed9f');
+                    hullGrad.addColorStop(1, '#2ed573');
+                }
+
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = hullGrad;
+                ctx.fill();
+
+                // Panel Lines
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 3. Scanner Eye (Cylon / Knight Rider style)
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(-25, -10, 50, 20, 10);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+                ctx.clip(); // Clip drawing to eye visor
+
+                // Scanner Light
+                let scanX = Math.sin(this.scannerAngle) * 20;
+                let eyeColor = commandsSwapped ? '#ff4757' : '#00d2d3'; // Red if AI Glitched, Cyan normal
+
+                // Glitch eye shake
+                if (commandsSwapped) scanX += (Math.random() - 0.5) * 5;
+
+                let eyeGrad = ctx.createRadialGradient(scanX, 0, 2, scanX, 0, 15);
+                eyeGrad.addColorStop(0, '#fff');
+                eyeGrad.addColorStop(0.5, eyeColor);
+                eyeGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+                ctx.fillStyle = eyeGrad;
+                ctx.fillRect(-30, -20, 60, 40);
+                ctx.restore();
+
+                // 4. Status Indicator (Mouth-ish area)
+                if (this.state === 'JUMP') {
+                    ctx.fillStyle = '#ff9f43';
+                    ctx.beginPath();
+                    ctx.arc(0, 25, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ff9f43';
+                }
+
+                ctx.restore();
+            }
+
+            command(cmd) {
+                console.log('Processed Command:', cmd);
+                // Reset springs for punchiness
+                if (cmd === 'JUMP' && this.state === 'IDLE') {
+                    this.state = 'JUMP';
+                    this.posY.vel = -25;
+                    this.sy.vel = 0.5; // Stretch
+                    this.sx.vel = -0.2; // Thin
+                } else if (cmd === 'SPIN') {
+                    this.state = 'SPIN';
+                    this.timer = 120;
+                    this.posY.target = this.baseY - 150;
+                    this.sy.vel = 0.2;
+                } else if (cmd === 'DANCE') {
+                    this.state = 'DANCE';
+                    this.timer = 180;
+                } else if (cmd === 'EAT') {
+                    this.state = 'EAT';
+                    this.timer = 90;
+                    this.sx.vel = 0.3; // Fatten
+                }
+            }
+        }
+
+        // --- GAME LOOP ---
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const player = new DroneCharacter(canvas.width / 2, canvas.height / 2 + 100);
+        const audio = new AudioController();
+
+
+        let score = 0;
+        let isRunning = false;
+        let commandsSwapped = false;
+
+        // Command mappings (Standard for now, AI twists later)
+        let commands = {
+            'jump': 'JUMP',
+            'hop': 'JUMP',
+            'dance': 'DANCE',
+            'spin': 'SPIN',
+            'roll': 'SPIN',
+            'eat': 'EAT',
+            'pizza': 'EAT'
+        };
+
+        let actionKeys = ['JUMP', 'DANCE', 'SPIN', 'EAT'];
+
+        function distortCommands() {
+            if (commandsSwapped) return;
+            commandsSwapped = true;
+
+            // Randomly shuffle mappings
+            // Note: This just shuffles what the logic *executes*, not what user says
+            // Actually, we want to map "jump" -> "SPIN"
+
+            let shuffledActions = [...actionKeys].sort(() => Math.random() - 0.5);
+
+            // Remap
+            commands['jump'] = shuffledActions[0];
+            commands['dance'] = shuffledActions[1];
+            commands['spin'] = shuffledActions[2];
+            commands['eat'] = shuffledActions[3];
+
+            console.log("AI Distortion Active!", commands);
+
+            showBubble("AI TAKING OVER!!!!");
+            document.querySelector('body').style.background = 'linear-gradient(135deg, #6c5ce7, #a29bfe)';
+            document.querySelector('#start-screen h1').innerText = "GLITCH MODE";
+
+            // Glitch sound
+            audio.playTone(100, 'sawtooth', 0.5);
+            setTimeout(() => audio.playTone(50, 'square', 0.5), 200);
+        }
+
+        function showBubble(text) {
+            const bubble = document.getElementById('command-bubble');
+            bubble.innerText = text;
+            bubble.classList.remove('pop');
+            void bubble.offsetWidth; // Trigger reflow
+            bubble.classList.add('pop');
+            setTimeout(() => bubble.classList.remove('pop'), 1000);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            audio.resume();
+            isRunning = true;
+
+            if (recognition) {
+                recognition.start();
+                document.getElementById('mic-text').innerText = "Listening...";
+                document.querySelector('.mic-icon').style.background = '#2ed573';
+
+                recognition.onresult = (event) => {
+                    const last = event.results.length - 1;
+                    const text = event.results[last][0].transcript.trim().toLowerCase();
+                    console.log('Heard:', text);
+
+                    // Show raw input briefly for debug/feedback
+                    const micText = document.getElementById('mic-text');
+                    micText.innerText = `Heard: "${text}"`;
+                    setTimeout(() => micText.innerText = "Listening...", 1000); // Reset
+
+                    // Smarter word boundary check
+                    for (let key in commands) {
+                        // Regex looks for the word as a whole word, not substring
+                        // e.g. "eating" wont match "eat" unless we handle it, but "eat pizza" matches "eat"
+                        // Actually, 'eat' is inside 'eating', so includes() triggers on 'eating'. 
+                        // We want to avoid accidental triggers from similar words.
+                        // Let's use word boundary \b
+
+                        const regex = new RegExp(`\\b${key}\\b`, 'i');
+
+                        if (regex.test(text)) {
+                            const action = commands[key];
+
+                            // Visual feedback of what user said vs what happened
+                            if (commandsSwapped) {
+                                showBubble(`${key.toUpperCase()}? -> ${action}!`);
+                            } else {
+                                showBubble(action + "!");
+                            }
+
+                            player.command(action);
+                            score += 100;
+                            document.getElementById('score-display').innerText = `Score: ${score}`;
+                            audio.playTone(600, 'sine', 0.1);
+
+                            // Trigger distortion after 500 points
+                            if (score >= 500 && !commandsSwapped) {
+                                distortCommands();
+                            }
+
+                            // Break after first valid command found in phrase to prevent double triggers
+                            // e.g. "Jump and Dance" -> Just Jump first.
+                            break;
+                        }
+                    }
+                };
+
+                recognition.onend = () => {
+                    if (isRunning) recognition.start(); // Keep listening
+                };
+            }
+
+            loop();
+        }
+
+        function loop() {
+            if (!isRunning) return;
+
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Stage Floor
+            let grd = ctx.createLinearGradient(0, player.baseY + 60, 0, canvas.height);
+            grd.addColorStop(0, '#0f0c29');
+            grd.addColorStop(0.5, '#302b63');
+            grd.addColorStop(1, '#24243e');
+
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, player.baseY + 60, canvas.width, canvas.height - (player.baseY + 60));
+
+            // Floor Line glow
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00ffff';
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, player.baseY + 60);
+            ctx.lineTo(canvas.width, player.baseY + 60);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            player.update();
+            player.draw(ctx);
+
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2;
+            player.baseY = canvas.height / 2 + 100;
+            player.y = player.baseY; // Reset to avoid falling through floor on resize
+        });
+
+    </script>
+</body>
+
+</html>
